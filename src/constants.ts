@@ -230,6 +230,40 @@ export const MOVIES: Movie[] = [
     awards: ['Academy Award: Best Adapted Screenplay', 'BAFTA: Best Film'],
     quotes: [{ text: "My heart is, and always will be, yours.", actor: "Edward Ferrars" }],
     locations: ['Picturehouse Central', 'Hackney Picturehouse', 'Crouch End Picturehouse']
+  },
+  {
+    id: 'm-secret-1',
+    title: 'Sherlock Holmes: Restored Lost Reels',
+    director: 'Guy Ritchie',
+    year: 2026,
+    genre: ['Mystery', 'Action'],
+    rating: 8.9,
+    description: 'A secret member-only premiere of newly restored 1920s cinema reels from the private British Film Institute vaults.',
+    imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&q=80&w=1000',
+    trailerUrl: 'https://www.youtube.com/embed/J7nJbzy9rR4',
+    color: '#003061',
+    starring: ['Robert Downey Jr.', 'Jude Law'],
+    awards: ['BFI Vaults Masterpiece Restoration'],
+    quotes: [{ text: "It's a game, Watson.", actor: "Sherlock Holmes" }],
+    locations: ['BFI VIP Lounge', 'VIP Screening Southbank'],
+    isLocked: true
+  },
+  {
+    id: 'm-secret-2',
+    title: 'The Crown: Lost Broadcasts',
+    director: 'Peter Morgan',
+    year: 2026,
+    genre: ['Drama', 'History'],
+    rating: 9.1,
+    description: 'A custom, elite curation of vintage Royal broadcasts and behind-the-scenes recordings, unseen for over sixty years.',
+    imageUrl: 'https://images.unsplash.com/photo-1543536448-d209d2d13a1c?auto=format&fit=crop&q=80&w=1000',
+    trailerUrl: 'https://www.youtube.com/embed/JWtnJjn6ng0',
+    color: '#D4AF37',
+    starring: ['Claire Foy', 'Matt Smith'],
+    awards: ['Royal Archives Special Selection'],
+    quotes: [{ text: "History is written by those who capture the lens.", actor: "Queen Elizabeth II" }],
+    locations: ['BFI VIP Pavilion'],
+    isLocked: true
   }
 ];
 

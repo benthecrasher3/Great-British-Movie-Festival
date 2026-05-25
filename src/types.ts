@@ -17,6 +17,7 @@ export interface Movie {
   watchLocationName?: string;
   isRemoved?: boolean;
   removalReason?: string;
+  isLocked?: boolean;
 }
 
 export interface FestivalEvent {
@@ -36,6 +37,7 @@ export interface FoodItem {
   description: string;
   imageUrl: string;
   category: 'Snacks' | 'Drinks' | 'Combos';
+  isRemoved?: boolean;
 }
 
 export interface Booking {
@@ -48,6 +50,7 @@ export interface Booking {
   price: number;
   date: string;
   isPaid?: boolean;
+  refundStatus?: 'none' | 'requested' | 'refunded';
 }
 
 export interface FoodOrder {

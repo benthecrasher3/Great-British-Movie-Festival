@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Film, Calendar, Star, ChevronRight, Play, Search, X, CheckCircle2, Check, ShoppingBag, Coffee, CreditCard, Lock, QrCode, Smartphone, Menu } from 'lucide-react';
+import { Film, Calendar, Star, ChevronRight, Play, Search, X, CheckCircle2, Check, ShoppingBag, Coffee, CreditCard, Lock, QrCode, Smartphone, Menu, Music, Sparkles, Gift, Ticket, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOVIES, EVENTS, FOOD_ITEMS } from './constants';
 import { Login, AdminDashboard } from './components/AdminUI';
@@ -356,6 +356,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'qris' | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '' });
@@ -371,6 +372,112 @@ export default function App() {
   });
   const [bookings, setBookings] = useState<any[]>([]);
   const [foodOrders, setFoodOrders] = useState<any[]>([]);
+
+  const loadedUserRef = React.useRef<string | null>(null);
+
+  const handleUserLogin = (email: string) => {
+    setIsUserLoggedIn(true);
+    setUserEmail(email);
+    
+    // Load saved itinerary from account
+    const saved = localStorage.getItem('festival_users');
+    if (saved) {
+      const users = JSON.parse(saved);
+      if (users[email]) {
+        const savedBookings = users[email].bookings || [];
+        const savedFoodOrders = users[email].foodOrders || [];
+        setBookings(savedBookings);
+        setFoodOrders(savedFoodOrders);
+        loadedUserRef.current = email;
+        return;
+      }
+    }
+    // If user has no saved itinerary but they were guest, let's auto-save their guest items to their new account
+    loadedUserRef.current = email;
+    if (saved) {
+      const users = JSON.parse(saved);
+      if (users[email]) {
+        users[email].bookings = bookings;
+        users[email].foodOrders = foodOrders;
+        localStorage.setItem('festival_users', JSON.stringify(users));
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    if (isUserLoggedIn && userEmail && loadedUserRef.current === userEmail) {
+      const saved = localStorage.getItem('festival_users');
+      if (saved) {
+        const users = JSON.parse(saved);
+        if (users[userEmail]) {
+          users[userEmail].bookings = bookings;
+          users[userEmail].foodOrders = foodOrders;
+          localStorage.setItem('festival_users', JSON.stringify(users));
+        }
+      }
+    }
+  }, [bookings, foodOrders, isUserLoggedIn, userEmail]);
+
+  const handleLogout = () => {
+    setIsAdminLoggedIn(false);
+    setIsUserLoggedIn(false);
+    setUserEmail('');
+    setBookings([]);
+    setFoodOrders([]);
+    loadedUserRef.current = null;
+    navigateTo('home');
+  };
+
+  const getAllBookings = () => {
+    const all: any[] = [];
+    const saved = localStorage.getItem('festival_users');
+    if (saved) {
+      const users = JSON.parse(saved);
+      Object.keys(users).forEach(email => {
+        if (users[email].bookings) {
+          users[email].bookings.forEach((b: any) => {
+            all.push({ ...b, email });
+          });
+        }
+      });
+    }
+    bookings.forEach((b: any) => {
+      if (!all.some(item => item.id === b.id)) {
+        all.push({ ...b, email: userEmail || 'Guest' });
+      }
+    });
+    return all;
+  };
+
+  const handleAdminSetBookings = (updater: any) => {
+    const currentAll = getAllBookings();
+    const updatedAll = typeof updater === 'function' ? updater(currentAll) : updater;
+    
+    const saved = localStorage.getItem('festival_users');
+    if (saved) {
+      const users = JSON.parse(saved);
+      updatedAll.forEach((b: any) => {
+        const email = b.email;
+        if (email && users[email]) {
+          if (!users[email].bookings) users[email].bookings = [];
+          const idx = users[email].bookings.findIndex((item: any) => item.id === b.id);
+          if (idx > -1) {
+            users[email].bookings[idx] = b;
+          } else {
+            users[email].bookings.push(b);
+          }
+        }
+      });
+      localStorage.setItem('festival_users', JSON.stringify(users));
+    }
+    
+    setBookings(prev => {
+      return prev.map(b => {
+        const found = updatedAll.find((x: any) => x.id === b.id);
+        return found ? found : b;
+      });
+    });
+  };
 
   const addToFoodOrder = (item: any) => {
     const existingIndex = foodOrders.findIndex(o => o.itemId === item.id && !o.isPaid);
@@ -549,6 +656,15 @@ export default function App() {
                 )}
               </button>
             ))}
+            <a 
+              href="https://great-british-festival.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-british-blue transition-all cursor-pointer outline-none relative group"
+            >
+              Music
+              <span className="absolute -bottom-1 left-0 h-0.5 bg-british-blue transition-all duration-300 w-0 group-hover:w-full" />
+            </a>
             
             {isAdminLoggedIn && (
               <button 
@@ -560,7 +676,7 @@ export default function App() {
             )}
 
             <button 
-              onClick={() => isAdminLoggedIn || isUserLoggedIn ? (setIsAdminLoggedIn(false), setIsUserLoggedIn(false), navigateTo('home')) : navigateTo('login')} 
+              onClick={() => isAdminLoggedIn || isUserLoggedIn ? handleLogout() : navigateTo('login')} 
               className={`px-6 py-2 font-black uppercase text-[9px] tracking-widest transition-all ${isAdminLoggedIn || isUserLoggedIn ? 'border-2 border-black/10 hover:border-british-blue text-zinc-900' : 'bg-british-blue text-white hover:bg-black'}`}
             >
               {isAdminLoggedIn || isUserLoggedIn ? 'Logout' : 'Login'}
@@ -594,9 +710,17 @@ export default function App() {
                   {v === 'food' ? 'Snacks' : v === 'schedule' ? 'Events' : v === 'experience' ? 'My Trip' : v === 'about' ? 'About' : v === 'program' ? 'Program' : v}
                 </button>
               ))}
+              <a 
+                href="https://great-british-festival.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-4xl font-display font-black uppercase tracking-tighter text-left border-b border-black/5 pb-4 text-zinc-900"
+              >
+                Music
+              </a>
               <div className="flex flex-col gap-4 mt-auto">
                 <button 
-                  onClick={() => isAdminLoggedIn || isUserLoggedIn ? (setIsAdminLoggedIn(false), setIsUserLoggedIn(false), navigateTo('home')) : navigateTo('login')}
+                  onClick={() => isAdminLoggedIn || isUserLoggedIn ? handleLogout() : navigateTo('login')}
                   className="w-full py-6 bg-british-blue text-white font-black uppercase tracking-[0.2em]"
                 >
                   {isAdminLoggedIn || isUserLoggedIn ? 'Sign Out' : 'Sign In'}
@@ -641,6 +765,34 @@ export default function App() {
                     >
                       Event Calendar
                     </button>
+                    <a 
+                      href="https://great-british-festival.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-10 py-5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-rose-600 hover:to-red-700 text-white font-black uppercase text-[10px] tracking-[0.35em] transition-all duration-300 shadow-xl shadow-red-600/10 hover:shadow-red-600/30 flex items-center gap-4 group/music relative overflow-hidden"
+                    >
+                      {/* Subtly animated light sweep on hover */}
+                      <span className="absolute inset-0 bg-white/10 opacity-0 group-hover/music:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                      
+                      <div className="relative flex items-center gap-2.5 z-10">
+                        {/* Live Radio pulse indicator */}
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                        </span>
+                        
+                        <Music size={13} className="group-hover/music:rotate-12 group-hover/music:scale-110 transition-transform duration-500 text-white" />
+                        <span>Music Festival</span>
+                      </div>
+
+                      {/* Equalizer Wave bar animations appearing on hover */}
+                      <div className="relative flex items-end gap-[3px] h-[16px] z-10 w-6">
+                        <span className="w-[2px] bg-white rounded-full h-1 group-hover/music:eq-bar-1" />
+                        <span className="w-[2px] bg-white rounded-full h-2 group-hover/music:eq-bar-2" />
+                        <span className="w-[2px] bg-white rounded-full h-1.5 group-hover/music:eq-bar-3" />
+                        <span className="w-[2px] bg-white rounded-full h-3 group-hover/music:eq-bar-4" />
+                      </div>
+                    </a>
                   </div>
                 </motion.div>
               </div>
@@ -919,24 +1071,65 @@ export default function App() {
                           delay: (idx % 2) * 0.1
                         }}
                         className="group relative"
-                        onClick={() => setSelectedMovie(movie)}
+                        onClick={() => {
+                          if (movie.isLocked && !isUserLoggedIn) {
+                            navigateTo('login');
+                          } else {
+                            setSelectedMovie(movie);
+                          }
+                        }}
                       >
                         <div className="relative w-full aspect-[16/10] bg-zinc-200 overflow-hidden mb-10 shadow-2xl glass-surface rounded-sm">
                           <img 
                             src={movie.imageUrl} 
                             alt={movie.title} 
-                            className="absolute inset-0 w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100"
+                            className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100 ${movie.isLocked && !isUserLoggedIn ? 'blur-md opacity-25 scale-105' : ''}`}
                             referrerPolicy="no-referrer"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10" />
-                          <div className="absolute inset-0 flex items-center justify-center z-20">
-                            <motion.div 
-                              whileHover={{ scale: 1.1 }}
-                              className="w-16 h-16 rounded-full border border-british-blue/30 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-500 scale-150 group-hover:scale-100"
-                            >
-                              <Play size={20} className="text-british-blue fill-british-blue ml-0.5" />
-                            </motion.div>
-                          </div>
+                          
+                          {/* Standard Play Hover Button for Available Movies */}
+                          {(!movie.isLocked || isUserLoggedIn) && (
+                            <div className="absolute inset-0 flex items-center justify-center z-20">
+                              <motion.div 
+                                whileHover={{ scale: 1.1 }}
+                                className="w-16 h-16 rounded-full border border-british-blue/30 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-500 scale-150 group-hover:scale-100"
+                              >
+                                <Play size={20} className="text-british-blue fill-british-blue ml-0.5" />
+                              </motion.div>
+                            </div>
+                          )}
+
+                          {/* Exclusive locked overlay when user is not logged in */}
+                          {movie.isLocked && !isUserLoggedIn && (
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 z-20 text-center">
+                              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-2 shadow-xl animate-pulse">
+                                <Lock size={16} />
+                              </div>
+                              <span className="text-amber-400 text-[8px] font-black uppercase tracking-[0.25em] mb-1 font-sans">Fellowship Lock</span>
+                              <span className="text-white text-base font-display font-black uppercase tracking-tight truncate max-w-full px-2">{movie.title}</span>
+                              <span className="text-white/40 text-[9px] font-serif italic mt-0.5 pb-3">Register below to unlock Premiere</span>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigateTo('login');
+                                }}
+                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-950 transition-colors shadow-lg"
+                              >
+                                Create Account
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Elegant green badge for logged-in members (Unlocked feature) */}
+                          {movie.isLocked && isUserLoggedIn && (
+                            <div className="absolute top-8 left-8 z-20 flex items-center gap-2">
+                              <div className="bg-emerald-600 text-white text-[8px] font-black px-3 py-1.5 uppercase tracking-widest shadow-xl leading-none flex items-center gap-1.5 rounded-sm">
+                                <Sparkles size={10} className="animate-pulse" /> Unlocked Premiere
+                              </div>
+                            </div>
+                          )}
+
                           <div className="absolute top-8 right-8 z-20 flex items-center gap-2">
                              <div className="bg-british-blue text-white text-[10px] font-black px-4 py-2 uppercase tracking-widest shadow-xl leading-none">
                                {movie.rating} ★
@@ -946,7 +1139,14 @@ export default function App() {
                         
                         <div className="flex justify-between items-start gap-8 relative z-20 text-left">
                           <div className="flex-1">
-                            <h4 className="text-4xl md:text-5xl font-display font-black uppercase text-zinc-900 mb-4 leading-none tracking-tighter group-hover:text-british-blue transition-colors">{movie.title}</h4>
+                            <h4 className="text-4xl md:text-5xl font-display font-black uppercase text-zinc-900 mb-4 leading-none tracking-tighter group-hover:text-british-blue transition-colors">
+                              {movie.title}
+                              {movie.isLocked && (
+                                <span className="ml-3 inline-block align-middle text-[8px] font-mono font-black text-amber-600 border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 rounded tracking-widest uppercase">
+                                  Secret Premiere
+                                </span>
+                              )}
+                            </h4>
                             <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-6 font-sans">
                               <span className="flex items-center gap-2">Directed by <span className="text-zinc-600 font-bold">{movie.director}</span></span>
                               <span className="w-1 h-1 bg-black/10 rounded-full" />
@@ -959,8 +1159,12 @@ export default function App() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedMovie(movie);
-                              setShowTicketModal(true);
+                              if (movie.isLocked && !isUserLoggedIn) {
+                                navigateTo('login');
+                              } else {
+                                setSelectedMovie(movie);
+                                setShowTicketModal(true);
+                              }
                             }}
                             className="flex-shrink-0 w-16 h-16 rounded-full bg-british-blue text-white flex items-center justify-center hover:bg-black transition-all shadow-xl group/btn"
                           >
@@ -1108,7 +1312,7 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                   {concessions.map((item) => (
+                   {concessions.filter(f => !f.isRemoved).map((item) => (
                       <motion.div 
                         key={item.id}
                         initial={{ opacity: 0 }}
@@ -1170,49 +1374,95 @@ export default function App() {
                         <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-400 border-b border-black/5 pb-8">Itinerary Selection ({bookings.length})</h4>
                         {bookings.length > 0 ? (
                           <div className="space-y-6">
-                            {bookings.map((booking) => (
-                              <motion.div 
-                                key={booking.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="bg-zinc-50 p-10 border border-black/5 flex flex-col md:flex-row justify-between gap-12 group hover:border-british-blue transition-all shadow-sm rounded-sm"
-                              >
-                                <div className="text-left">
-                                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-british-blue mb-4 block leading-none">{booking.type} Selection</span>
-                                  <h5 className="text-4xl font-display font-black uppercase text-zinc-900 mb-6 tracking-tighter leading-none group-hover:text-british-blue transition-colors">{booking.title}</h5>
-                                  <div className="flex flex-wrap gap-8 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                    <div className="flex items-center gap-3"><Calendar size={16} className="text-british-blue" /> {booking.date}</div>
-                                    <div className="flex items-center gap-3"><Star size={16} className="text-british-blue" /> {booking.location}</div>
-                                    <div className="flex items-center gap-3 font-bold text-zinc-600">Qty: {booking.quantity}</div>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col justify-between items-end border-t md:border-t-0 md:border-l border-black/5 pt-8 md:pt-0 md:pl-12 text-right">
-                                  <div className="mb-6">
-                                    <span className="block text-[10px] font-black uppercase text-zinc-300 mb-2 leading-none">Member ID</span>
-                                    <span className="font-mono text-sm font-bold tracking-[0.3em] text-zinc-900">#BT-{booking.id.split('-')[0].toUpperCase()}</span>
-                                  </div>
-                                  {booking.isPaid ? (
-                                    <div className="bg-white p-3 shadow-2xl mb-6">
-                                      <QRCodeSVG 
-                                        value={`booking-${booking.id}`} 
-                                        size={100}
-                                        level="M"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="mb-8 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 bg-zinc-100 px-6 py-3 border border-black/5">
-                                      <Lock size={14} className="text-british-blue" /> Ticket Pending
-                                    </div>
-                                  )}
-                                  <button 
-                                    onClick={() => cancelBooking(booking.id)}
-                                    className="text-[10px] font-black uppercase tracking-[0.3em] text-british-blue hover:text-black transition-colors"
-                                  >
-                                    Void Registration
-                                  </button>
-                                </div>
-                              </motion.div>
-                            ))}
+                             {bookings.map((booking) => {
+                               const associatedMovie = booking.type === 'movie' ? movies.find(m => m.id === booking.itemId || m.title === booking.title) : null;
+                               const isMovieRemoved = associatedMovie?.isRemoved;
+                               return (
+                                 <motion.div 
+                                   key={booking.id}
+                                   initial={{ opacity: 0, x: -20 }}
+                                   animate={{ opacity: 1, x: 0 }}
+                                   className="bg-zinc-50 p-10 border border-black/5 flex flex-col hover:border-british-blue transition-all shadow-sm rounded-sm"
+                                 >
+                                   <div className="flex flex-col md:flex-row justify-between gap-12 group">
+                                     <div className="text-left">
+                                       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-british-blue mb-4 block leading-none">{booking.type} Selection</span>
+                                       <h5 className="text-4xl font-display font-black uppercase text-zinc-900 mb-6 tracking-tighter leading-none group-hover:text-british-blue transition-colors">{booking.title}</h5>
+                                       <div className="flex flex-wrap gap-8 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                         <div className="flex items-center gap-3"><Calendar size={16} className="text-british-blue" /> {booking.date}</div>
+                                         <div className="flex items-center gap-3"><Star size={16} className="text-british-blue" /> {booking.location}</div>
+                                         <div className="flex items-center gap-3 font-bold text-zinc-600">Qty: {booking.quantity}</div>
+                                       </div>
+                                     </div>
+                                     <div className="flex flex-col justify-between items-end border-t md:border-t-0 md:border-l border-black/5 pt-8 md:pt-0 md:pl-12 text-right">
+                                       <div className="mb-6">
+                                         <span className="block text-[10px] font-black uppercase text-zinc-300 mb-2 leading-none">Member ID</span>
+                                         <span className="font-mono text-sm font-bold tracking-[0.3em] text-zinc-900">#BT-{booking.id.split('-')[0].toUpperCase()}</span>
+                                       </div>
+                                       {booking.isPaid ? (
+                                         <div className="bg-white p-3 shadow-2xl mb-6">
+                                           <QRCodeSVG 
+                                             value={`booking-${booking.id}`} 
+                                             size={100}
+                                             level="M"
+                                           />
+                                         </div>
+                                       ) : (
+                                         <div className="mb-8 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 bg-zinc-100 px-6 py-3 border border-black/5">
+                                           <Lock size={14} className="text-british-blue" /> Ticket Pending
+                                         </div>
+                                       )}
+                                       <button 
+                                         onClick={() => cancelBooking(booking.id)}
+                                         className="text-[10px] font-black uppercase tracking-[0.3em] text-british-blue hover:text-black transition-colors"
+                                       >
+                                         Void Registration
+                                       </button>
+                                     </div>
+                                   </div>
+
+                                   {isMovieRemoved && (
+                                     <div className="mt-8 pt-8 border-t border-british-red/10 bg-red-500/[0.02] p-8 border border-british-red/20 text-left rounded-sm">
+                                       <p className="text-[10px] font-black uppercase tracking-widest text-british-red flex items-center gap-2 mb-4 leading-none">
+                                         <AlertTriangle size={14} /> Cinema Decommissioning Refund Protocol
+                                       </p>
+                                       <p className="text-xs uppercase tracking-wider text-zinc-500 leading-relaxed mb-6">
+                                         This film selection has been decommissioned by the Festival Director. Members with paid reservations are entitled to request and claim full financial liquidation.
+                                       </p>
+                                       {booking.isPaid ? (
+                                         <div className="flex items-center gap-4">
+                                           {(!booking.refundStatus || booking.refundStatus === 'none') && (
+                                             <button 
+                                               onClick={() => {
+                                                 setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, refundStatus: 'requested' } : b));
+                                                 alert('Your refund claim has been drafted and dispatched to the Union Treasury Console.');
+                                               }}
+                                               className="px-6 py-4 bg-british-red text-white text-[9px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all"
+                                             >
+                                               Request Refund Claim
+                                             </button>
+                                           )}
+                                           {booking.refundStatus === 'requested' && (
+                                             <span className="text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-sm">
+                                               Refund Audit Pending Approval
+                                             </span>
+                                           )}
+                                           {booking.refundStatus === 'refunded' && (
+                                             <span className="text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-600 rounded-sm">
+                                               Disbursement Confirmed & Issued
+                                             </span>
+                                           )}
+                                         </div>
+                                       ) : (
+                                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                           Unpaid draft. No liquidation case needed.
+                                         </span>
+                                       )}
+                                     </div>
+                                   )}
+                                 </motion.div>
+                               );
+                             })}
                           </div>
                         ) : (
                           <div className="py-32 text-center bg-zinc-50 border border-dashed border-black/10">
@@ -1328,9 +1578,11 @@ export default function App() {
               setIsUserLoggedIn(true);
               navigateTo('admin-panel');
             }} 
-            onUserLogin={(email) => {
-              setIsUserLoggedIn(true);
-              setUserEmail(email);
+            onUserLogin={(email, newlyRegistered) => {
+              handleUserLogin(email);
+              if (newlyRegistered) {
+                setShowWelcomeCelebration(true);
+              }
               navigateTo('experience');
             }}
           />
@@ -1338,16 +1590,15 @@ export default function App() {
 
         {view === 'admin-panel' && isAdminLoggedIn && (
           <AdminDashboard 
-            onLogout={() => {
-              setIsAdminLoggedIn(false);
-              navigateTo('home');
-            }}
+            onLogout={handleLogout}
             movies={movies}
             setMovies={setMovies}
             concessions={concessions}
             setConcessions={setConcessions}
             ticketPrice={adminPrice}
             setTicketPrice={setAdminPrice}
+            bookings={getAllBookings()}
+            setBookings={handleAdminSetBookings}
           />
         )}
 
@@ -1376,6 +1627,7 @@ export default function App() {
               <button onClick={() => navigateTo('food')} className="hover:text-british-blue transition-colors">Menu</button>
               <button onClick={() => navigateTo('experience')} className="hover:text-british-blue transition-colors">Voyage</button>
               <button onClick={() => setShowInviteModal(true)} className="hover:text-british-blue transition-colors">Invite</button>
+              <a href="https://great-british-festival.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-british-blue transition-colors">Music</a>
             </div>
 
             <div 
@@ -1664,6 +1916,127 @@ export default function App() {
                     <span className="text-lg font-black text-zinc-900">{selectedMovie.year} National Film Centre</span>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Newly Registered Member Congratulations / Benefits Unveiling Modal */}
+      <AnimatePresence>
+        {showWelcomeCelebration && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWelcomeCelebration(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
+              className="relative w-full max-w-4xl bg-zinc-950 text-white border border-white/10 shadow-5xl overflow-hidden rounded-md flex flex-col md:flex-row z-[125]"
+            >
+              {/* Gold/Prism Background Flare */}
+              <div className="absolute inset-0 opacity-20 pointer-events-none">
+                <div className="absolute top-0 right-10 w-[400px] h-[400px] bg-amber-500 rounded-full blur-[120px]" />
+                <div className="absolute -bottom-20 -left-10 w-[300px] h-[300px] bg-british-blue rounded-full blur-[100px]" />
+              </div>
+
+              {/* Decorative Left Column: Personalized Membership Pass card */}
+              <div className="w-full md:w-[45%] bg-zinc-900 p-12 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent pointer-events-none" />
+                
+                <div>
+                  <div className="flex items-center justify-between mb-16">
+                     <div className="w-10 h-10 border border-white/20 rounded-full flex items-center justify-center text-white italic font-display font-black text-xl">B</div>
+                     <span className="text-[8px] font-mono tracking-[0.4em] text-amber-500 uppercase font-black bg-amber-500/10 px-3 py-1 border border-amber-500/20 rounded-full">Active Fellow</span>
+                  </div>
+                  
+                  <span className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 mb-2 block">Fellowship Privilege Pass</span>
+                  <h4 className="text-3xl font-display font-black uppercase tracking-tighter text-zinc-100 leading-none mb-12">
+                     BRITISH <br /><span className="italic font-light text-amber-500 font-serif lowercase">alliance.</span>
+                  </h4>
+                </div>
+
+                <div className="space-y-8 relative z-10 text-left">
+                  <div className="p-6 bg-white/5 border border-white/5 rounded-sm backdrop-blur-sm">
+                    <span className="block text-[8px] font-mono tracking-widest text-zinc-500 uppercase mb-2">Member Credentials</span>
+                    <p className="font-mono text-xs text-white truncate font-bold">{userEmail || 'member@dossier.uk'}</p>
+                    <div className="mt-4 flex items-center justify-between text-[9px] font-mono text-zinc-400">
+                      <span>ID: #BF-{Math.floor(1000 + Math.random() * 9000)}</span>
+                      <span>ISSUE: 2026/05</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500 uppercase tracking-widest pt-2 border-t border-white/5">
+                    <span>BFI Southbank Premium</span>
+                    <span>Class 01</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Exclusive unlocked features detail checklist */}
+              <div className="w-full md:w-[55%] p-12 md:p-16 flex flex-col justify-center relative z-10 text-left">
+                <button 
+                  onClick={() => setShowWelcomeCelebration(false)}
+                  className="absolute top-8 right-8 text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+
+                <div className="mb-10">
+                  <span className="inline-flex items-center gap-2 text-amber-500 mb-3">
+                    <Sparkles size={14} className="animate-pulse" />
+                    <span className="font-mono text-[9px] font-black uppercase tracking-widest">FESTIVAL ALLIANCE UNLOCKED</span>
+                  </span>
+                  <h3 className="text-4xl font-display font-black uppercase tracking-tighter leading-tight mb-4">
+                     Welcome to <br />
+                     The <span className="font-serif italic font-light text-amber-500 lowercase">Registry.</span>
+                  </h3>
+                  <p className="text-zinc-400 font-serif italic text-sm">
+                     Congratulations! Your credential registration is successfully verified. We have automatically unlocked your member-only pathways and system privileges:
+                  </p>
+                </div>
+
+                <div className="space-y-6 mb-12">
+                   <div className="flex gap-4 items-start">
+                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-500 text-[10px] font-bold">✓</div>
+                     <div>
+                       <h5 className="text-[11px] font-black uppercase tracking-widest text-zinc-100 mb-1">Instant 20% Account Discount</h5>
+                       <p className="text-xs text-zinc-400">Applied automatically across all ticket class categories and gourmet cinema concession menus during check out.</p>
+                     </div>
+                   </div>
+
+                   <div className="flex gap-4 items-start">
+                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-500 text-[10px] font-bold">✓</div>
+                     <div>
+                       <h5 className="text-[11px] font-black uppercase tracking-widest text-zinc-100 mb-1 flex items-center gap-2">
+                         Secret Premiere Screenings Unveiled
+                         <span className="text-[8px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-mono font-black tracking-widest">UNLOCKED</span>
+                       </h5>
+                       <p className="text-xs text-zinc-400">Restored films such as "Sherlock Holmes: Restored Lost Reels" and "The Crown" are now completely queryable and playable in the film folder catalog.</p>
+                     </div>
+                   </div>
+
+                   <div className="flex gap-4 items-start">
+                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-500 text-[10px] font-bold">✓</div>
+                     <div>
+                       <h5 className="text-[11px] font-black uppercase tracking-widest text-zinc-100 mb-1">Priority Boarding & Entry QR</h5>
+                       <p className="text-xs text-zinc-400">A security check-in priority pass is generated automatically in your "My Trip" dashboard folder, enabling express cabin check-ins.</p>
+                     </div>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowWelcomeCelebration(false)}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-black py-5 font-black uppercase tracking-[0.4em] text-[10px] transition-all duration-300 shadow-xl shadow-amber-500/10 hover:shadow-amber-500/30 text-center"
+                >
+                  Enter Member Lounge
+                </button>
               </div>
             </motion.div>
           </div>
