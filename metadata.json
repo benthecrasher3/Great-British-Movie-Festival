@@ -1,0 +1,6 @@
+{
+  "name": "Great British Festival",
+  "description": "Celebrating the best of British culture, arts, and cinema.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

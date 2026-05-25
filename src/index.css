@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", serif;
+  --font-display: "Outfit", sans-serif;
+  --color-british-red: #da291c;
+  --color-british-red-dark: #b31d14;
+  --color-british-blue: #003061;
+  --color-british-blue-dark: #002347;
+  --color-gold: #c5a059;
+  --color-warm-gray: #1a1a1a;
+  --color-deep-black: #050505;
+}
+
+@layer base {
+  body {
+    @apply bg-zinc-50 text-zinc-900 transition-colors duration-300 antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-surface {
+    @apply bg-white/70 backdrop-blur-xl border border-black/5;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+}
